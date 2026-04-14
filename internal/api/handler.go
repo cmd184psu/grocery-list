@@ -23,9 +23,10 @@ func NewHandler(s *store.Store, groups []string) *Handler {
 // Register mounts all API routes on mux.
 func (h *Handler) Register(mux *http.ServeMux) {
 	// Config
-	mux.HandleFunc("/api/config",                h.handleConfig)
-	mux.HandleFunc("/api/config/groups",         h.handleConfigGroupsAdd)
-	mux.HandleFunc("/api/config/groups/remove",  h.handleConfigGroupsRemove)
+	mux.HandleFunc("/api/config",                 h.handleConfig)
+	mux.HandleFunc("/api/config/groups",          h.handleConfigGroupsAdd)
+	mux.HandleFunc("/api/config/groups/remove",   h.handleConfigGroupsRemove)
+	mux.HandleFunc("/api/config/groups/reorder",  h.handleConfigGroupsReorder)
 
 	// Items
 	mux.HandleFunc("/api/items",    h.handleItems)
@@ -132,6 +133,27 @@ func (h *Handler) handleConfigGroupsRemove(w http.ResponseWriter, r *http.Reques
 		"groups": h.groups,
 		"items":  h.store.List(),
 	})
+}
+
+// POST /api/config/groups/reorder  {"groups":[...]}  → persist new group order
+func (h *Handler) handleConfigGroupsReorder(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	var body struct {
+		Groups []string `json:"groups"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Groups) == 0 {
+		writeError(w, http.StatusBadRequest, "groups array required")
+		return
+	}
+	h.groups = body.Groups
+	if err := h.store.SaveGroups(h.groups); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"groups": h.groups})
 }
 
 // decodeName reads {"name":"..."} from the request body.

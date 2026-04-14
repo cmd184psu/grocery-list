@@ -244,7 +244,19 @@
     }
     groups.forEach(g => {
       const li  = document.createElement('li');
-      li.className = 'groups-modal-item';
+      li.className    = 'groups-modal-item';
+      li.dataset.group = g;
+
+      // Drag handle
+      const handle = document.createElement('span');
+      handle.className = 'groups-modal-handle';
+      handle.title     = 'Drag to reorder';
+      handle.setAttribute('aria-label', 'Drag to reorder group');
+      handle.innerHTML = `<svg viewBox="0 0 14 14" fill="currentColor" width="14" height="14">
+        <circle cx="4" cy="3"  r="1.2"/><circle cx="10" cy="3"  r="1.2"/>
+        <circle cx="4" cy="7"  r="1.2"/><circle cx="10" cy="7"  r="1.2"/>
+        <circle cx="4" cy="11" r="1.2"/><circle cx="10" cy="11" r="1.2"/>
+      </svg>`;
 
       const nameEl = document.createElement('span');
       nameEl.className   = 'groups-modal-name';
@@ -259,10 +271,107 @@
         <path d="M3 3l10 10M13 3L3 13"/></svg>`;
       del.addEventListener('click', () => removeGroup(g));
 
+      li.appendChild(handle);
       li.appendChild(nameEl);
       li.appendChild(del);
       groupsList.appendChild(li);
+
+      attachGroupDrag(li, handle);
     });
+  }
+
+  // ────────────────────────────────────────────────────────────────
+  // Group-list drag (mouse + touch, handle-only)
+  // ────────────────────────────────────────────────────────────────
+  const gdrag = { active: false, srcGroup: null };
+
+  function attachGroupDrag(row, handle) {
+    function clearGIndicators() {
+      groupsList.querySelectorAll('.gdrag-above,.gdrag-below')
+        .forEach(el => el.classList.remove('gdrag-above', 'gdrag-below'));
+    }
+
+    function gPointerStart() {
+      gdrag.active   = true;
+      gdrag.srcGroup = row.dataset.group;
+      row.classList.add('gdragging');
+    }
+
+    function gPointerMove(clientY) {
+      if (!gdrag.active) return;
+      clearGIndicators();
+      const els = [...groupsList.querySelectorAll('.groups-modal-item')];
+      for (const el of els) {
+        if (el.dataset.group === gdrag.srcGroup) continue;
+        const rect = el.getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) {
+          el.classList.add('gdrag-above');
+          break;
+        } else {
+          el.classList.add('gdrag-below');
+        }
+      }
+    }
+
+    function gPointerEnd(clientY) {
+      if (!gdrag.active) return;
+      gdrag.active = false;
+      groupsList.querySelectorAll('.groups-modal-item.gdragging')
+        .forEach(el => el.classList.remove('gdragging'));
+
+      // Find insertion point
+      const els      = [...groupsList.querySelectorAll('.groups-modal-item')];
+      const names    = els.map(el => el.dataset.group);
+      const fromIdx  = names.indexOf(gdrag.srcGroup);
+      let   toIdx    = names.length; // default: end
+
+      for (let i = 0; i < els.length; i++) {
+        if (els[i].dataset.group === gdrag.srcGroup) continue;
+        const rect = els[i].getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) {
+          toIdx = i;
+          break;
+        }
+      }
+
+      const dragged = gdrag.srcGroup;
+      clearGIndicators();
+      gdrag.srcGroup = null;
+
+      if (fromIdx === toIdx || fromIdx === -1) return;
+      const newOrder = [...names];
+      newOrder.splice(fromIdx, 1);
+      const insertAt = fromIdx < toIdx ? toIdx - 1 : toIdx;
+      newOrder.splice(insertAt, 0, dragged);
+      reorderGroups(newOrder);
+    }
+
+    // Mouse
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      gPointerStart();
+      const onMove = e => gPointerMove(e.clientY);
+      const onUp   = e => {
+        gPointerEnd(e.clientY);
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onUp);
+    });
+
+    // Touch
+    handle.addEventListener('touchstart', e => {
+      gPointerStart();
+      const onMove = e => { gPointerMove(e.touches[0].clientY); e.preventDefault(); };
+      const onEnd  = e => {
+        gPointerEnd(e.changedTouches[0].clientY);
+        handle.removeEventListener('touchmove', onMove);
+        handle.removeEventListener('touchend',  onEnd);
+      };
+      handle.addEventListener('touchmove', onMove, { passive: false });
+      handle.addEventListener('touchend',  onEnd);
+    }, { passive: true });
   }
 
   function openGroupsModal() {
@@ -283,6 +392,22 @@
     render();
     if (syncEnabled) {
       const data = await api('POST', '/api/config/groups', { name }).catch(() => null);
+      if (data?.groups) {
+        groups = data.groups;
+        rebuildGroupSelect();
+        renderGroupsList();
+        render();
+      }
+    }
+  }
+
+  async function reorderGroups(newOrder) {
+    groups = newOrder;
+    rebuildGroupSelect();
+    renderGroupsList();
+    render();
+    if (syncEnabled) {
+      const data = await api('POST', '/api/config/groups/reorder', { groups: newOrder }).catch(() => null);
       if (data?.groups) {
         groups = data.groups;
         rebuildGroupSelect();

@@ -543,6 +543,146 @@ main {
   background: var(--color-primary-highlight);
 }
 
+/* ── Groups modal drag handle ──────────────────────────────────── */
+.groups-modal-handle {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; flex-shrink: 0;
+  color: var(--color-text-faint);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+  transition: color var(--t), background var(--t);
+  -webkit-tap-highlight-color: transparent;
+}
+.groups-modal-handle:hover {
+  color: var(--color-text-muted);
+  background: var(--color-surface-offset);
+}
+.groups-modal-handle:active { cursor: grabbing; }
+.groups-modal-handle svg { pointer-events: none; }
+
+/* Drag-in-progress states */
+.groups-modal-item.gdragging {
+  opacity: 0.4;
+}
+.groups-modal-item.gdrag-above {
+  border-top: 2px solid var(--color-primary);
+}
+.groups-modal-item.gdrag-below {
+  border-bottom: 2px solid var(--color-primary);
+}
+
+/* ── Groups modal drag handle ──────────────────────────────────── */
+.groups-modal-handle {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; flex-shrink: 0;
+  color: var(--color-text-faint);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+  transition: color var(--t), background var(--t);
+  -webkit-tap-highlight-color: transparent;
+}
+.groups-modal-handle:hover {
+  color: var(--color-text-muted);
+  background: var(--color-surface-offset);
+}
+.groups-modal-handle:active { cursor: grabbing; }
+.groups-modal-handle svg { pointer-events: none; }
+
+/* Drag-in-progress states */
+.groups-modal-item.gdragging {
+  opacity: 0.4;
+}
+.groups-modal-item.gdrag-above {
+  border-top: 2px solid var(--color-primary);
+}
+.groups-modal-item.gdrag-below {
+  border-bottom: 2px solid var(--color-primary);
+}
+
+/* ── Groups modal drag handle ──────────────────────────────────── */
+.groups-modal-handle {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; flex-shrink: 0;
+  color: var(--color-text-faint);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+  transition: color var(--t), background var(--t);
+  -webkit-tap-highlight-color: transparent;
+}
+.groups-modal-handle:hover {
+  color: var(--color-text-muted);
+  background: var(--color-surface-offset);
+}
+.groups-modal-handle:active { cursor: grabbing; }
+.groups-modal-handle svg { pointer-events: none; }
+
+/* Drag-in-progress states */
+.groups-modal-item.gdragging {
+  opacity: 0.4;
+}
+.groups-modal-item.gdrag-above {
+  border-top: 2px solid var(--color-primary);
+}
+.groups-modal-item.gdrag-below {
+  border-bottom: 2px solid var(--color-primary);
+}
+
+/* ── Groups modal drag handle ──────────────────────────────────── */
+.groups-modal-handle {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; flex-shrink: 0;
+  color: var(--color-text-faint);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+  transition: color var(--t), background var(--t);
+  -webkit-tap-highlight-color: transparent;
+}
+.groups-modal-handle:hover {
+  color: var(--color-text-muted);
+  background: var(--color-surface-offset);
+}
+.groups-modal-handle:active { cursor: grabbing; }
+.groups-modal-handle svg { pointer-events: none; }
+
+/* Drag-in-progress states */
+.groups-modal-item.gdragging {
+  opacity: 0.4;
+}
+.groups-modal-item.gdrag-above {
+  border-top: 2px solid var(--color-primary);
+}
+.groups-modal-item.gdrag-below {
+  border-bottom: 2px solid var(--color-primary);
+}
+
+/* ── Groups modal drag handle ──────────────────────────────────── */
+.groups-modal-handle {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; flex-shrink: 0;
+  color: var(--color-text-faint);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+  transition: color var(--t), background var(--t);
+  -webkit-tap-highlight-color: transparent;
+}
+.groups-modal-handle:hover {
+  color: var(--color-text-muted);
+  background: var(--color-surface-offset);
+}
+.groups-modal-handle:active { cursor: grabbing; }
+.groups-modal-handle svg { pointer-events: none; }
+
+/* Drag-in-progress states */
+.groups-modal-item.gdragging {
+  opacity: 0.4;
+}
+.groups-modal-item.gdrag-above {
+  border-top: 2px solid var(--color-primary);
+}
+.groups-modal-item.gdrag-below {
+  border-bottom: 2px solid var(--color-primary);
+}
+
 /* ── Hide-not-needed active state ─────────────────────────────── */
 .header-icon-btn.active {
   color: var(--color-primary);
