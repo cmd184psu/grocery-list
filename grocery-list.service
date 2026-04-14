@@ -1,0 +1,19 @@
+[Unit]
+Description=Grocery List Web App
+After=network.target
+
+[Service]
+Type=simple
+User=grocery
+Group=grocery
+WorkingDirectory=/opt/grocery-list
+ExecStart=/opt/grocery-list/grocery-list --config /home/grocery/.grocery.json
+Restart=on-failure
+RestartSec=5s
+
+# Harden a bit — it's a local LAN service
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

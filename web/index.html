@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grocery List</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- ── Main header ───────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="header-left">
+      <svg aria-label="Grocery List" class="app-logo" viewBox="0 0 28 28" fill="none">
+        <rect x="5" y="3" width="18" height="22" rx="3" stroke="currentColor" stroke-width="2"/>
+        <path d="M10 9h8M10 13h8M10 17h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="7.5" cy="9"  r="1.2" fill="currentColor"/>
+        <circle cx="7.5" cy="13" r="1.2" fill="currentColor"/>
+        <circle cx="7.5" cy="17" r="1.2" fill="currentColor"/>
+      </svg>
+      <h1>Grocery List</h1>
+    </div>
+    <div class="header-right">
+
+      <!-- Hide not-needed -->
+      <button id="hide-not-needed-btn" class="header-icon-btn" title="Hide &lsquo;Not Needed&rsquo; items and empty groups" aria-pressed="false">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z"/>
+          <circle cx="10" cy="10" r="2.5"/>
+        </svg>
+      </button>
+
+      <!-- Collapse / expand all -->
+      <button id="collapse-all-btn" class="header-icon-btn" title="Collapse all sections">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <!-- two upward chevrons -->
+          <path d="M4 12l6-6 6 6"/>
+          <path d="M4 17l6-6 6 6"/>
+        </svg>
+      </button>
+      <button id="expand-all-btn" class="header-icon-btn" title="Expand all sections">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <!-- two downward chevrons -->
+          <path d="M4 3l6 6 6-6"/>
+          <path d="M4 8l6 6 6-6"/>
+        </svg>
+      </button>
+
+      <!-- Reset -->
+      <button id="reset-btn" class="header-icon-btn" title="Reset list to Check state">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4a8 8 0 1 1 0 12"/>
+          <path d="M4 8V4H0"/>
+        </svg>
+      </button>
+
+      <!-- Groups -->
+      <button id="groups-btn" class="header-icon-btn" title="Manage groups">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h14M3 10h14M3 14h8"/>
+        </svg>
+      </button>
+
+      <!-- Sync toggle -->
+      <label class="sync-toggle" title="Sync changes to server">
+        <span class="sync-label">Sync</span>
+        <input type="checkbox" id="sync-toggle" checked>
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+      </label>
+    </div>
+  </header>
+
+  <!-- ── Offline banner ────────────────────────────────────────── -->
+  <div id="offline-banner" class="offline-banner hidden">
+    &#9888; Offline mode &mdash; changes are local only
+  </div>
+
+  <!-- ── List ──────────────────────────────────────────────────── -->
+  <main id="main">
+    <div id="groups-container"></div>
+    <div id="empty-state" class="empty-state hidden">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="18" cy="42" r="3"/><circle cx="36" cy="42" r="3"/>
+        <path d="M2 4h6l5.5 26h21l5-18H13"/>
+      </svg>
+      <p>Your list is empty</p>
+      <span>Add your first item below</span>
+    </div>
+  </main>
+
+  <!-- ── Add footer ────────────────────────────────────────────── -->
+  <footer class="add-footer">
+    <form id="add-form" class="add-form">
+      <select id="group-select" aria-label="Select group"></select>
+      <input type="text" id="new-item-input" placeholder="Add an item&hellip;"
+             autocomplete="off" autocorrect="off" spellcheck="false" maxlength="120">
+      <button type="submit" aria-label="Add item">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 4v12M4 10h12"/>
+        </svg>
+      </button>
+    </form>
+  </footer>
+
+  <!-- ══ Reset confirmation modal ═══════════════════════════════ -->
+  <div id="reset-modal" class="modal-overlay hidden" role="dialog"
+       aria-modal="true" aria-labelledby="reset-modal-title">
+    <div class="modal">
+      <div class="modal-icon modal-icon--warning">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0
+                   1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9"  x2="12"    y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h2 id="reset-modal-title" class="modal-title">Reset the list?</h2>
+      <p class="modal-body">
+        All checkboxes will be cleared and every item&rsquo;s state will be
+        set to <strong>Check</strong>.
+      </p>
+      <div class="modal-actions">
+        <button id="reset-cancel"  class="btn btn-ghost">No, cancel</button>
+        <button id="reset-confirm" class="btn btn-danger">Yes, reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ Groups management modal ════════════════════════════════ -->
+  <div id="groups-modal" class="modal-overlay hidden" role="dialog"
+       aria-modal="true" aria-labelledby="groups-modal-title">
+    <div class="modal">
+      <h2 id="groups-modal-title" class="modal-title">Manage Groups</h2>
+      <p class="modal-body modal-body--hint">
+        Removing a group moves its items to
+        <strong>No Group</strong> until reassigned.
+      </p>
+      <ul id="groups-modal-list" class="groups-modal-list"></ul>
+      <form id="groups-modal-form" class="groups-modal-add">
+        <input type="text" id="groups-modal-input" placeholder="New group name&hellip;"
+               autocomplete="off" maxlength="60">
+        <button type="submit" class="btn btn-primary btn-sm">Add</button>
+      </form>
+      <div class="modal-actions modal-actions--right">
+        <button id="groups-modal-close" class="btn btn-ghost">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
