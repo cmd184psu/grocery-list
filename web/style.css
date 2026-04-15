@@ -89,6 +89,336 @@ input, select { font: inherit; color: inherit; }
   box-shadow: var(--shadow-sm);
   gap: var(--space-2);
 }
+
+/* ── Progress meter ─────────────────────────────────────── */
+.progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-surface-off);
+  min-width: 60px;
+  /* inner gap between segments via outline trick */
+  gap: 1px;
+}
+.progress-segment {
+  height: 100%;
+  min-width: 0;
+  transition: width 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+/* Needed → green */
+#prog-needed    { background: #2d8a4e; }
+/* Check → amber-yellow */
+#prog-check     { background: #c9860a; }
+/* Not Needed → red */
+#prog-not-needed { background: #c0392b; }
+/* Completed → blue */
+#prog-completed { background: #2471a3; }
+
+/* Subtle inner shine */
+.progress-segment::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: rgb(255 255 255 / 0.12);
+  pointer-events: none;
+}
+
+/* Tap-to-reveal percentage label */
+.progress-segment::before {
+  content: attr(data-pct);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+.progress-segment.seg-open::before {
+  opacity: 1;
+}
+/* Lift the open segment slightly so it stands out */
+.progress-segment.seg-open {
+  filter: brightness(1.12);
+  z-index: 2;
+}
+
+/* Tap-to-reveal percentage label */
+.progress-segment::before {
+  content: attr(data-pct);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+.progress-segment.seg-open::before {
+  opacity: 1;
+}
+/* Lift the open segment slightly so it stands out */
+.progress-segment.seg-open {
+  filter: brightness(1.12);
+  z-index: 2;
+}
+
+/* Tap-to-reveal percentage label */
+.progress-segment::before {
+  content: attr(data-pct);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+.progress-segment.seg-open::before {
+  opacity: 1;
+}
+/* Lift the open segment slightly so it stands out */
+.progress-segment.seg-open {
+  filter: brightness(1.12);
+  z-index: 2;
+}
+
+/* Tap-to-reveal percentage label */
+.progress-segment::before {
+  content: attr(data-pct);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+.progress-segment.seg-open::before {
+  opacity: 1;
+}
+/* Lift the open segment slightly so it stands out */
+.progress-segment.seg-open {
+  filter: brightness(1.12);
+  z-index: 2;
+}
+
+/* Tap-to-reveal percentage label */
+.progress-segment::before {
+  content: attr(data-pct);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1;
+}
+.progress-segment.seg-open::before {
+  opacity: 1;
+}
+/* Lift the open segment slightly so it stands out */
+.progress-segment.seg-open {
+  filter: brightness(1.12);
+  z-index: 2;
+}
+
+/* ── Progress meter ─────────────────────────────────────── */
+.progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-surface-off);
+  min-width: 60px;
+  /* inner gap between segments via outline trick */
+  gap: 1px;
+}
+.progress-segment {
+  height: 100%;
+  min-width: 0;
+  transition: width 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+/* Needed → green */
+#prog-needed    { background: #2d8a4e; }
+/* Check → amber-yellow */
+#prog-check     { background: #c9860a; }
+/* Not Needed → red */
+#prog-not-needed { background: #c0392b; }
+/* Completed → blue */
+#prog-completed { background: #2471a3; }
+
+/* Subtle inner shine */
+.progress-segment::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: rgb(255 255 255 / 0.12);
+  pointer-events: none;
+}
+
+/* ── Progress meter ─────────────────────────────────────── */
+.progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-surface-off);
+  min-width: 60px;
+  /* inner gap between segments via outline trick */
+  gap: 1px;
+}
+.progress-segment {
+  height: 100%;
+  min-width: 0;
+  transition: width 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+/* Needed → green */
+#prog-needed    { background: #2d8a4e; }
+/* Check → amber-yellow */
+#prog-check     { background: #c9860a; }
+/* Not Needed → red */
+#prog-not-needed { background: #c0392b; }
+/* Completed → blue */
+#prog-completed { background: #2471a3; }
+
+/* Subtle inner shine */
+.progress-segment::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: rgb(255 255 255 / 0.12);
+  pointer-events: none;
+}
+
+/* ── Progress meter ─────────────────────────────────────── */
+.progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-surface-off);
+  min-width: 60px;
+  /* inner gap between segments via outline trick */
+  gap: 1px;
+}
+.progress-segment {
+  height: 100%;
+  min-width: 0;
+  transition: width 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+/* Needed → green */
+#prog-needed    { background: #2d8a4e; }
+/* Check → amber-yellow */
+#prog-check     { background: #c9860a; }
+/* Not Needed → red */
+#prog-not-needed { background: #c0392b; }
+/* Completed → blue */
+#prog-completed { background: #2471a3; }
+
+/* Subtle inner shine */
+.progress-segment::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: rgb(255 255 255 / 0.12);
+  pointer-events: none;
+}
+
+/* ── Progress meter ─────────────────────────────────────── */
+.progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background: var(--color-surface-off);
+  min-width: 60px;
+  /* inner gap between segments via outline trick */
+  gap: 1px;
+}
+.progress-segment {
+  height: 100%;
+  min-width: 0;
+  transition: width 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+/* Needed → green */
+#prog-needed    { background: #2d8a4e; }
+/* Check → amber-yellow */
+#prog-check     { background: #c9860a; }
+/* Not Needed → red */
+#prog-not-needed { background: #c0392b; }
+/* Completed → blue */
+#prog-completed { background: #2471a3; }
+
+/* Subtle inner shine */
+.progress-segment::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 50% 0;
+  background: rgb(255 255 255 / 0.12);
+  pointer-events: none;
+}
 .header-left  { display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
 .header-right {
   display: flex; align-items: center;

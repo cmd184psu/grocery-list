@@ -16,6 +16,7 @@ type Config struct {
 	StaticDir string   `json:"static_dir"`
 	DataFile  string   `json:"data_file"`
 	Groups    []string `json:"groups"`
+	Progress  bool     `json:"progress"`
 }
 
 func DefaultConfig() *Config {

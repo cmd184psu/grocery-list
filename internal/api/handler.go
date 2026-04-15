@@ -11,13 +11,14 @@ import (
 
 // Handler wires HTTP routes to the store.
 type Handler struct {
-	store  *store.Store
-	groups []string
+	store    *store.Store
+	groups   []string
+	progress bool
 }
 
 // NewHandler returns a Handler with an initial group list.
-func NewHandler(s *store.Store, groups []string) *Handler {
-	return &Handler{store: s, groups: groups}
+func NewHandler(s *store.Store, groups []string, progress bool) *Handler {
+	return &Handler{store: s, groups: groups, progress: progress}
 }
 
 // Register mounts all API routes on mux.
@@ -73,7 +74,7 @@ func (h *Handler) handleConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"groups": h.groups})
+	writeJSON(w, http.StatusOK, map[string]any{"groups": h.groups, "progress": h.progress})
 }
 
 // POST /api/config/groups  {"name":"Dairy"}  → add a group

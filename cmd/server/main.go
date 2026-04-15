@@ -60,7 +60,7 @@ func main() {
 		effectiveGroups = persistedGroups
 	}
 
-	h   := api.NewHandler(s, effectiveGroups)
+	h   := api.NewHandler(s, effectiveGroups, cfg.Progress)
 	mux := http.NewServeMux()
 	h.Register(mux)
 

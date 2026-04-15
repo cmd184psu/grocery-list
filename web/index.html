@@ -23,6 +23,15 @@
       </svg>
       <h1>Grocery List</h1>
     </div>
+
+    <!-- ── Progress meter (shown only when progress:true in config) ── -->
+    <div id="progress-bar" class="progress-bar hidden" role="meter" aria-label="Item progress">
+      <div class="progress-segment" id="prog-completed"  data-label="Completed"></div>
+      <div class="progress-segment" id="prog-needed"     data-label="Needed"></div>
+      <div class="progress-segment" id="prog-check"      data-label="Check"></div>
+      <div class="progress-segment" id="prog-not-needed" data-label="Not Needed"></div>
+    </div>
+
     <div class="header-right">
 
       <!-- Hide not-needed -->

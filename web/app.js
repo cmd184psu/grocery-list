@@ -10,6 +10,7 @@
   let syncEnabled     = true;
   let collapsedGroups = {};
   let hideNotNeeded   = false;
+  let showProgress    = false;
 
   const drag = { active: false, id: null, srcGroup: null };
 
@@ -84,8 +85,10 @@
 
   async function loadConfig() {
     const cfg = await api('GET', '/api/config').catch(() => null);
-    groups = cfg?.groups || [];
+    groups       = cfg?.groups   || [];
+    showProgress = cfg?.progress || false;
     rebuildGroupSelect();
+    renderProgressBar();
   }
 
   async function fetchItems() {
@@ -451,11 +454,77 @@
   });
 
   // ────────────────────────────────────────────────────────────────
+  // Progress bar
+  // ────────────────────────────────────────────────────────────────
+  const progressBar    = document.getElementById('progress-bar');
+  const progNeeded     = document.getElementById('prog-needed');
+  const progCheck      = document.getElementById('prog-check');
+  const progNotNeeded  = document.getElementById('prog-not-needed');
+  const progCompleted  = document.getElementById('prog-completed');
+
+  function renderProgressBar() {
+    if (!showProgress || items.length === 0) {
+      progressBar.classList.add('hidden');
+      return;
+    }
+    progressBar.classList.remove('hidden');
+
+    const total      = items.length;
+    const nNeeded    = items.filter(i => i.state === 'needed'     && !i.completed).length;
+    const nCheck     = items.filter(i => i.state === 'check'      && !i.completed).length;
+    const nNotNeeded = items.filter(i => i.state === 'not_needed' && !i.completed).length;
+    const nCompleted = items.filter(i => i.completed).length;
+
+    function pct(n) { return (n / total * 100).toFixed(1) + '%'; }
+    function tip(label, n) { return `${label}: ${n} (${(n/total*100).toFixed(0)}%)`; }
+
+    progNeeded.style.width    = pct(nNeeded);
+    progCheck.style.width     = pct(nCheck);
+    progNotNeeded.style.width = pct(nNotNeeded);
+    progCompleted.style.width = pct(nCompleted);
+
+    progNeeded.title    = tip('Needed',      nNeeded);
+    progCheck.title     = tip('Check',       nCheck);
+    progNotNeeded.title = tip('Not Needed',  nNotNeeded);
+    progCompleted.title = tip('Completed',   nCompleted);
+
+    // Update inline label text (shown on tap)
+    function labelText(pctVal) { return Math.round(pctVal) + '%'; }
+    progCompleted.dataset.pct  = labelText(nCompleted  / total * 100);
+    progNeeded.dataset.pct     = labelText(nNeeded     / total * 100);
+    progCheck.dataset.pct      = labelText(nCheck      / total * 100);
+    progNotNeeded.dataset.pct  = labelText(nNotNeeded  / total * 100);
+  }
+
+  // Tap a segment to reveal/hide its percentage label
+  document.getElementById('progress-bar').addEventListener('click', e => {
+    const seg = e.target.closest('.progress-segment');
+    if (!seg) return;
+    // Toggle this one; close all others
+    const isOpen = seg.classList.contains('seg-open');
+    document.querySelectorAll('.progress-segment').forEach(s => s.classList.remove('seg-open'));
+    if (!isOpen) seg.classList.add('seg-open');
+  });
+
+  // Clicking outside the bar closes any open label
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#progress-bar')) {
+      document.querySelectorAll('.progress-segment.seg-open')
+        .forEach(s => s.classList.remove('seg-open'));
+    }
+  });
+
+  // ────────────────────────────────────────────────────────────────
   // Render
   // ────────────────────────────────────────────────────────────────
   function render() {
     gc.innerHTML = '';
     emptyEl.classList.toggle('hidden', items.length > 0);
+    renderProgressBar();
+    renderProgressBar();
+    renderProgressBar();
+    renderProgressBar();
+    renderProgressBar();
 
     const renderList = groupsForRender();
 
