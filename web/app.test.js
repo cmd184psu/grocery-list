@@ -63,6 +63,44 @@ function removeGroup(groups, items, name) {
   return { groups: newGroups, items: newItems };
 }
 
+/**
+ * VISIBILITY_MODES — the three filter levels cycled by the eye button.
+ *   0 = SHOW_ALL        : display everything
+ *   1 = HIDE_NOT_NEEDED : hide items whose state is 'not_needed'; hide empty groups
+ *   2 = HIDE_COMPLETED  : also hide items that are completed; hide empty groups
+ */
+const VISIBILITY_MODES = [
+  'show_all',
+  'hide_not_needed',
+  'hide_completed',
+];
+
+function nextVisibilityMode(current) {
+  return (current + 1) % VISIBILITY_MODES.length;
+}
+
+/**
+ * visibilityFilter returns true if the item should be visible in the given mode.
+ *   mode 0 (show_all)       → always true
+ *   mode 1 (hide_not_needed)→ false when state === 'not_needed'
+ *   mode 2 (hide_completed) → false when state === 'not_needed' OR completed === true
+ */
+function visibilityFilter(item, mode) {
+  if (mode === 0) return true;
+  if (item.state === 'not_needed') return false;
+  if (mode === 2 && item.completed) return false;
+  return true;
+}
+
+/**
+ * groupIsVisible returns true if the group has at least one visible item
+ * (or if mode is 0, always true so empty groups still show).
+ */
+function groupIsVisible(items, group, mode) {
+  if (mode === 0) return true;
+  return items.some(i => i.group === group && visibilityFilter(i, mode));
+}
+
 // ────────────────────────────────────────────────────────────────
 // Tests
 // ────────────────────────────────────────────────────────────────
@@ -205,5 +243,75 @@ describe('removeGroup', () => {
     const { groups: g, items: i } = removeGroup(groups, items, 'Bakery');
     assert.deepEqual(g, groups);
     assert.deepEqual(i.map(x => x.group), items.map(x => x.group));
+  });
+});
+
+describe('nextVisibilityMode', () => {
+  it('advances 0 → 1', () => assert.equal(nextVisibilityMode(0), 1));
+  it('advances 1 → 2', () => assert.equal(nextVisibilityMode(1), 2));
+  it('wraps 2 → 0',   () => assert.equal(nextVisibilityMode(2), 0));
+});
+
+describe('visibilityFilter', () => {
+  const needed     = { state: 'needed',     completed: false };
+  const check      = { state: 'check',      completed: false };
+  const notNeeded  = { state: 'not_needed', completed: false };
+  const completedN = { state: 'needed',     completed: true  };
+  const completedC = { state: 'check',      completed: true  };
+
+  describe('mode 0 (show_all)', () => {
+    it('shows needed items',           () => assert.equal(visibilityFilter(needed,     0), true));
+    it('shows check items',            () => assert.equal(visibilityFilter(check,      0), true));
+    it('shows not_needed items',       () => assert.equal(visibilityFilter(notNeeded,  0), true));
+    it('shows completed needed items', () => assert.equal(visibilityFilter(completedN, 0), true));
+  });
+
+  describe('mode 1 (hide_not_needed)', () => {
+    it('shows needed items',              () => assert.equal(visibilityFilter(needed,     1), true));
+    it('shows check items',               () => assert.equal(visibilityFilter(check,      1), true));
+    it('hides not_needed items',          () => assert.equal(visibilityFilter(notNeeded,  1), false));
+    it('shows completed items (not mode 2)', () => assert.equal(visibilityFilter(completedN, 1), true));
+  });
+
+  describe('mode 2 (hide_completed)', () => {
+    it('shows needed items',          () => assert.equal(visibilityFilter(needed,     2), true));
+    it('shows check items',           () => assert.equal(visibilityFilter(check,      2), true));
+    it('hides not_needed items',      () => assert.equal(visibilityFilter(notNeeded,  2), false));
+    it('hides completed needed',      () => assert.equal(visibilityFilter(completedN, 2), false));
+    it('hides completed check',       () => assert.equal(visibilityFilter(completedC, 2), false));
+  });
+});
+
+describe('groupIsVisible', () => {
+  const items = [
+    { id: '1', group: 'Produce', state: 'needed',     completed: false },
+    { id: '2', group: 'Produce', state: 'not_needed', completed: false },
+    { id: '3', group: 'Dairy',   state: 'not_needed', completed: false },
+    { id: '4', group: 'Frozen',  state: 'needed',     completed: true  },
+    { id: '5', group: 'Empty',   state: 'not_needed', completed: false },
+  ];
+
+  describe('mode 0 (show_all)', () => {
+    it('shows all groups including empty-ish ones', () => {
+      ['Produce', 'Dairy', 'Frozen', 'Empty', 'NoItems'].forEach(g =>
+        assert.equal(groupIsVisible(items, g, 0), true)
+      );
+    });
+  });
+
+  describe('mode 1 (hide_not_needed)', () => {
+    it('shows Produce (has a needed item)',   () => assert.equal(groupIsVisible(items, 'Produce', 1), true));
+    it('hides Dairy (only not_needed items)', () => assert.equal(groupIsVisible(items, 'Dairy',   1), false));
+    it('shows Frozen (needed+completed)',     () => assert.equal(groupIsVisible(items, 'Frozen',  1), true));
+    it('hides Empty (only not_needed)',       () => assert.equal(groupIsVisible(items, 'Empty',   1), false));
+    it('hides group with no items at all',    () => assert.equal(groupIsVisible(items, 'NoItems', 1), false));
+  });
+
+  describe('mode 2 (hide_completed)', () => {
+    it('shows Produce (has a needed non-completed item)', () => assert.equal(groupIsVisible(items, 'Produce', 2), true));
+    it('hides Dairy (only not_needed)',                   () => assert.equal(groupIsVisible(items, 'Dairy',   2), false));
+    it('hides Frozen (needed but completed)',             () => assert.equal(groupIsVisible(items, 'Frozen',  2), false));
+    it('hides Empty (only not_needed)',                   () => assert.equal(groupIsVisible(items, 'Empty',   2), false));
+    it('hides group with no items at all',                () => assert.equal(groupIsVisible(items, 'NoItems', 2), false));
   });
 });

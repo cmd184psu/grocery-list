@@ -9,7 +9,8 @@
   let groups              = [];   // real groups only; NO_GROUP is virtual
   let syncEnabled         = true;
   let collapsedGroups     = {};
-  let hideNotNeeded       = false;
+  // 0=show_all  1=hide_not_needed  2=hide_completed
+  let visibilityMode      = 0;
   let showProgress        = false;
   let syncIntervalSeconds = 1;    // configurable via ~/.grocery.json
   let listTitle           = 'Grocery List'; // configurable via ~/.grocery.json
@@ -104,6 +105,35 @@
   // ────────────────────────────────────────────────────────────────
   // Pure helpers  (mirrored in app.test.js — keep in sync)
   // ────────────────────────────────────────────────────────────────
+
+  const VISIBILITY_MODES = ['show_all', 'hide_not_needed', 'hide_completed'];
+
+  function nextVisibilityMode(current) {
+    return (current + 1) % VISIBILITY_MODES.length;
+  }
+
+  /**
+   * visibilityFilter — true if item should be visible in the given mode.
+   *   0 (show_all)        → always true
+   *   1 (hide_not_needed) → hide state==='not_needed'
+   *   2 (hide_completed)  → also hide completed===true
+   */
+  function visibilityFilter(item, mode) {
+    if (mode === 0) return true;
+    if (item.state === 'not_needed') return false;
+    if (mode === 2 && item.completed) return false;
+    return true;
+  }
+
+  /**
+   * groupIsVisible — true when the group has at least one visible item.
+   * Mode 0 always returns true (show empty groups too).
+   */
+  function groupIsVisible(allItems, group, mode) {
+    if (mode === 0) return true;
+    return allItems.some(i => i.group === group && visibilityFilter(i, mode));
+  }
+
   function nextState(s) {
     return STATES[(STATES.indexOf(s) + 1) % STATES.length];
   }
@@ -267,17 +297,34 @@
   expandAll.addEventListener('click',   () => setAllCollapsed(false));
 
   // ────────────────────────────────────────────────────────────────
-  // Hide "Not Needed" toggle
+  // Visibility mode cycle  (eye button)
   // ────────────────────────────────────────────────────────────────
+  const VISIBILITY_TITLES = [
+    'Hide \u2018Not Needed\u2019 items',           // clicked from show_all
+    'Also hide completed items',                    // clicked from hide_not_needed
+    'Show all items',                               // clicked from hide_completed
+  ];
+  const VISIBILITY_ARIA = [
+    'Show all items',
+    'Hide Not Needed items and empty groups',
+    'Hide Not Needed, completed items and empty groups',
+  ];
+
+  function updateVisibilityBtn() {
+    hideNotNeededBtn.classList.toggle('active', visibilityMode !== 0);
+    // aria-label describes the *current* state
+    hideNotNeededBtn.setAttribute('aria-label', VISIBILITY_ARIA[visibilityMode]);
+    // title describes what clicking will do next
+    hideNotNeededBtn.title = VISIBILITY_TITLES[visibilityMode];
+  }
+
   hideNotNeededBtn.addEventListener('click', () => {
-    hideNotNeeded = !hideNotNeeded;
-    hideNotNeededBtn.classList.toggle('active', hideNotNeeded);
-    hideNotNeededBtn.setAttribute('aria-pressed', String(hideNotNeeded));
-    hideNotNeededBtn.title = hideNotNeeded
-      ? "Show \u2018Not Needed\u2019 items"
-      : "Hide \u2018Not Needed\u2019 items and empty groups";
+    visibilityMode = nextVisibilityMode(visibilityMode);
+    updateVisibilityBtn();
     render();
   });
+
+  updateVisibilityBtn(); // set initial state
 
   // ────────────────────────────────────────────────────────────────
   // Reset modal
@@ -592,21 +639,14 @@
     gc.innerHTML = '';
     emptyEl.classList.toggle('hidden', items.length > 0);
     renderProgressBar();
-    renderProgressBar();
-    renderProgressBar();
-    renderProgressBar();
-    renderProgressBar();
 
     const renderList = groupsForRender();
 
     renderList.forEach(group => {
-      const allGroupItems = itemsForGroup(group);
-      const groupItems    = hideNotNeeded
-        ? allGroupItems.filter(i => i.state !== 'not_needed')
-        : allGroupItems;
+      if (!groupIsVisible(items, group, visibilityMode)) return;
 
-      // When hiding not-needed, skip groups that are now empty.
-      if (hideNotNeeded && groupItems.length === 0) return;
+      const allGroupItems = itemsForGroup(group);
+      const groupItems    = allGroupItems.filter(i => visibilityFilter(i, visibilityMode));
       const isVirtual  = group === NO_GROUP;
       const isOpen     = !collapsedGroups[group];
 
@@ -621,7 +661,7 @@
       header.innerHTML = `
         <span class="group-title">${esc(group)}</span>
         <span class="group-meta">
-          <span class="group-count">${hideNotNeeded ? groupItems.length + '/' + allGroupItems.length : groupItems.length}</span>
+          <span class="group-count">${visibilityMode !== 0 ? groupItems.length + '/' + allGroupItems.length : groupItems.length}</span>
           <svg class="group-chevron" viewBox="0 0 16 16" fill="none"
                stroke="currentColor" stroke-width="2"
                stroke-linecap="round" stroke-linejoin="round">
