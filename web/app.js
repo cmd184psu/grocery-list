@@ -5,12 +5,13 @@
   const STATE_LABELS = { needed: 'Needed', check: 'Check', not_needed: 'Not Needed' };
   const NO_GROUP     = 'No Group';
 
-  let items           = [];
-  let groups          = [];   // real groups only; NO_GROUP is virtual
-  let syncEnabled     = true;
-  let collapsedGroups = {};
-  let hideNotNeeded   = false;
-  let showProgress    = false;
+  let items               = [];
+  let groups              = [];   // real groups only; NO_GROUP is virtual
+  let syncEnabled         = true;
+  let collapsedGroups     = {};
+  let hideNotNeeded       = false;
+  let showProgress        = false;
+  let syncIntervalSeconds = 1;    // configurable via ~/.grocery.json
 
   const drag = { active: false, id: null, srcGroup: null };
 
@@ -85,8 +86,9 @@
 
   async function loadConfig() {
     const cfg = await api('GET', '/api/config').catch(() => null);
-    groups       = cfg?.groups   || [];
-    showProgress = cfg?.progress || false;
+    groups              = cfg?.groups                || [];
+    showProgress        = cfg?.progress              || false;
+    syncIntervalSeconds = cfg?.sync_interval_seconds ?? 1;
     rebuildGroupSelect();
     renderProgressBar();
   }

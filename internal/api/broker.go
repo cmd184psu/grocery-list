@@ -11,10 +11,13 @@ import (
 type Broker struct {
 	mu      sync.Mutex
 	clients map[chan struct{}]struct{}
+	retryMs  int // SSE retry directive sent to clients on connect
 }
 
-func NewBroker() *Broker {
-	return &Broker{clients: make(map[chan struct{}]struct{})}
+// NewBroker creates a Broker. retryMs is the reconnect interval hint sent
+// to SSE clients via the "retry:" directive. Pass 0 to use the browser default.
+func NewBroker(retryMs int) *Broker {
+	return &Broker{clients: make(map[chan struct{}]struct{}), retryMs: retryMs}
 }
 
 // Notify sends a refresh signal to every connected SSE client.
@@ -65,6 +68,9 @@ func (b *Broker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 	// SSE comment line — signals the stream is open but does not trigger onmessage.
 	fmt.Fprintf(w, ": connected\n\n")
+	if b.retryMs > 0 {
+		fmt.Fprintf(w, "retry: %d\n\n", b.retryMs)
+	}
 	fl.Flush()
 
 	ch := make(chan struct{}, 1)

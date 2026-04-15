@@ -60,8 +60,8 @@ func main() {
 		effectiveGroups = persistedGroups
 	}
 
-	broker := api.NewBroker()
-	h      := api.NewHandler(s, effectiveGroups, cfg.Progress, broker)
+	broker := api.NewBroker(cfg.SyncIntervalSeconds * 1000)
+	h      := api.NewHandler(s, effectiveGroups, cfg.Progress, cfg.SyncIntervalSeconds, broker)
 	mux    := http.NewServeMux()
 	h.Register(mux)
 

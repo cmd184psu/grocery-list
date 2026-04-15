@@ -10,20 +10,22 @@ import (
 const DefaultConfigPath = "~/.grocery.json"
 
 type Config struct {
-	Port      int      `json:"port"`
-	TLSCert   string   `json:"tls_cert"`
-	TLSKey    string   `json:"tls_key"`
-	StaticDir string   `json:"static_dir"`
-	DataFile  string   `json:"data_file"`
-	Groups    []string `json:"groups"`
-	Progress  bool     `json:"progress"`
+	Port                int      `json:"port"`
+	TLSCert             string   `json:"tls_cert"`
+	TLSKey              string   `json:"tls_key"`
+	StaticDir           string   `json:"static_dir"`
+	DataFile            string   `json:"data_file"`
+	Groups              []string `json:"groups"`
+	Progress            bool     `json:"progress"`
+	SyncIntervalSeconds int      `json:"sync_interval_seconds"`
 }
 
 func DefaultConfig() *Config {
 	return &Config{
-		Port:      8080,
-		StaticDir: "./web",
-		DataFile:  "./items.json",
+		Port:                8080,
+		StaticDir:           "./web",
+		DataFile:            "./items.json",
+		SyncIntervalSeconds: 1,
 		Groups: []string{
 			"Produce",
 			"Meats",

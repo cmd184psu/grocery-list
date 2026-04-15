@@ -11,16 +11,18 @@ import (
 
 // Handler wires HTTP routes to the store.
 type Handler struct {
-	store    *store.Store
-	groups   []string
-	progress bool
-	broker   *Broker
+	store        *store.Store
+	groups       []string
+	progress     bool
+	syncInterval int // seconds; surfaced via GET /api/config
+	broker       *Broker
 }
 
 // NewHandler returns a Handler with an initial group list.
+// syncInterval is the client sync frequency in seconds (exposed via /api/config).
 // broker is used to push SSE refresh events to connected clients after mutations.
-func NewHandler(s *store.Store, groups []string, progress bool, broker *Broker) *Handler {
-	return &Handler{store: s, groups: groups, progress: progress, broker: broker}
+func NewHandler(s *store.Store, groups []string, progress bool, syncInterval int, broker *Broker) *Handler {
+	return &Handler{store: s, groups: groups, progress: progress, syncInterval: syncInterval, broker: broker}
 }
 
 // Register mounts all API routes on mux.
@@ -80,7 +82,11 @@ func (h *Handler) handleConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"groups": h.groups, "progress": h.progress})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"groups":                h.groups,
+		"progress":              h.progress,
+		"sync_interval_seconds": h.syncInterval,
+	})
 }
 
 // POST /api/config/groups  {"name":"Dairy"}  → add a group

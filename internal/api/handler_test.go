@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -36,8 +37,8 @@ func newHarness(t *testing.T, groups []string) *harness {
 	if len(groups) > 0 {
 		s.SaveGroups(groups)
 	}
-	broker := api.NewBroker()
-	h := api.NewHandler(s, groups, false, broker)
+	broker := api.NewBroker(0)
+	h := api.NewHandler(s, groups, false, 1, broker)
 	mux := http.NewServeMux()
 	h.Register(mux)
 	return &harness{s: s, h: h, broker: broker, mux: mux}
@@ -209,11 +210,9 @@ func TestHandlerGroupsAdd_ReservedNoGroup(t *testing.T) {
 
 func TestHandlerGroupsRemove_OrphansItems(t *testing.T) {
 	hh := newHarness(t, []string{"Produce", "Dairy"})
-	// Add an item to Produce.
 	hh.do(t, http.MethodPost, "/api/items",
 		map[string]string{"name": "Spinach", "group": "Produce"})
 
-	// Remove Produce.
 	w := hh.do(t, http.MethodPost, "/api/config/groups/remove",
 		map[string]string{"name": "Produce"})
 	if w.Code != http.StatusOK {
@@ -258,6 +257,41 @@ func TestHandlerGetConfig(t *testing.T) {
 	groups, ok := resp["groups"].([]any)
 	if !ok || len(groups) != 1 || groups[0] != "Bakery" {
 		t.Errorf("unexpected config: %v", resp)
+	}
+}
+
+// TestHandlerGetConfig_SyncInterval proves that sync_interval_seconds is
+// present in GET /api/config and reflects the value passed to NewHandler.
+func TestHandlerGetConfig_SyncInterval(t *testing.T) {
+	dir := t.TempDir()
+	s, err := store.New(filepath.Join(dir, "items.json"))
+	if err != nil {
+		t.Fatalf("store.New: %v", err)
+	}
+	const wantInterval = 7
+	broker := api.NewBroker(0)
+	h := api.NewHandler(s, nil, false, wantInterval, broker)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", w.Code)
+	}
+	var resp map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	got, ok := resp["sync_interval_seconds"]
+	if !ok {
+		t.Fatal("response missing \"sync_interval_seconds\" key")
+	}
+	// JSON numbers decode as float64.
+	if int(got.(float64)) != wantInterval {
+		t.Errorf("sync_interval_seconds: got %v, want %d", got, wantInterval)
 	}
 }
 
@@ -430,10 +464,45 @@ func TestBroker_NotifiedOnMove(t *testing.T) {
 
 // ── /api/events (SSE) ────────────────────────────────────────────────────
 
+// TestSSE_RetryDirectiveSent proves that when the broker is created with a
+// non-zero retryMs the SSE stream contains a "retry: <ms>" directive.
+func TestSSE_RetryDirectiveSent(t *testing.T) {
+	dir := t.TempDir()
+	s, err := store.New(filepath.Join(dir, "items.json"))
+	if err != nil {
+		t.Fatalf("store.New: %v", err)
+	}
+	const retryMs = 5000
+	broker := api.NewBroker(retryMs)
+	h := api.NewHandler(s, nil, false, 5, broker)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequest(http.MethodGet, "/api/events", nil).WithContext(ctx)
+	rw := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		mux.ServeHTTP(rw, req)
+		close(done)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+	<-done
+
+	body := rw.Body.String()
+	want := fmt.Sprintf("retry: %d", retryMs)
+	if !strings.Contains(body, want) {
+		t.Errorf("SSE stream missing %q; got: %q", want, body)
+	}
+}
+
 func TestSSE_ConnectedCommentSentOnOpen(t *testing.T) {
 	hh := newHarness(t, nil)
 
-	// Use a context we can cancel to terminate the SSE handler after reading.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -446,7 +515,6 @@ func TestSSE_ConnectedCommentSentOnOpen(t *testing.T) {
 		close(done)
 	}()
 
-	// Give the handler time to write the : connected comment and flush.
 	time.Sleep(50 * time.Millisecond)
 	cancel()
 	<-done
@@ -472,12 +540,10 @@ func TestSSE_DataEventDelivered(t *testing.T) {
 		close(done)
 	}()
 
-	// Wait for the connection preamble, then trigger a mutation.
 	time.Sleep(50 * time.Millisecond)
 	hh.do(t, http.MethodPost, "/api/items",
 		map[string]string{"name": "Broccoli", "group": "Produce"})
 
-	// Allow the event to propagate.
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 	<-done
@@ -487,7 +553,3 @@ func TestSSE_DataEventDelivered(t *testing.T) {
 		t.Errorf("SSE stream missing 'refresh' event after mutation; got: %q", body)
 	}
 }
-
-
-
-
