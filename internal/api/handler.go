@@ -14,11 +14,13 @@ type Handler struct {
 	store    *store.Store
 	groups   []string
 	progress bool
+	broker   *Broker
 }
 
 // NewHandler returns a Handler with an initial group list.
-func NewHandler(s *store.Store, groups []string, progress bool) *Handler {
-	return &Handler{store: s, groups: groups, progress: progress}
+// broker is used to push SSE refresh events to connected clients after mutations.
+func NewHandler(s *store.Store, groups []string, progress bool, broker *Broker) *Handler {
+	return &Handler{store: s, groups: groups, progress: progress, broker: broker}
 }
 
 // Register mounts all API routes on mux.
@@ -38,6 +40,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/reorder",  h.handleReorder)
 	mux.HandleFunc("/api/sync",     h.handleSync)
 	mux.HandleFunc("/api/reset",    h.handleReset)
+
+	// Live sync
+	mux.HandleFunc("/api/revision", h.handleRevision)
+	mux.Handle("/api/events",       h.broker)
 }
 
 // writeJSON encodes v as JSON with the given HTTP status.
@@ -104,6 +110,7 @@ func (h *Handler) handleConfigGroupsAdd(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"groups": h.groups})
+	h.broker.Notify()
 }
 
 // POST /api/config/groups/remove  {"name":"Dairy"}  → delete a group
@@ -134,6 +141,7 @@ func (h *Handler) handleConfigGroupsRemove(w http.ResponseWriter, r *http.Reques
 		"groups": h.groups,
 		"items":  h.store.List(),
 	})
+	h.broker.Notify()
 }
 
 // POST /api/config/groups/reorder  {"groups":[...]}  → persist new group order
@@ -155,6 +163,7 @@ func (h *Handler) handleConfigGroupsReorder(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"groups": h.groups})
+	h.broker.Notify()
 }
 
 // decodeName reads {"name":"..."} from the request body.
@@ -206,6 +215,7 @@ func (h *Handler) handleItems(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusCreated, item)
+		h.broker.Notify()
 
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -233,6 +243,7 @@ func (h *Handler) handleItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		writeJSON(w, http.StatusOK, item)
+		h.broker.Notify()
 
 	case http.MethodDelete:
 		if err := h.store.Delete(id); err != nil {
@@ -240,6 +251,7 @@ func (h *Handler) handleItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+		h.broker.Notify()
 
 	default:
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -268,6 +280,7 @@ func (h *Handler) handleMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, item)
+	h.broker.Notify()
 }
 
 // POST /api/reorder  {group, ids}
@@ -289,6 +302,7 @@ func (h *Handler) handleReorder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, h.store.List())
+	h.broker.Notify()
 }
 
 // POST /api/sync  [...items]
@@ -308,6 +322,7 @@ func (h *Handler) handleSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, merged)
+	h.broker.Notify()
 }
 
 // POST /api/reset  → all items: completed=false, state="check"
@@ -322,4 +337,15 @@ func (h *Handler) handleReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+	h.broker.Notify()
+}
+
+// GET /api/revision → {"revision": N}
+// Lightweight endpoint clients can poll to detect changes without fetching all items.
+func (h *Handler) handleRevision(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"revision": h.store.Revision()})
 }

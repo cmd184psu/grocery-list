@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/cmd184psu/grocery-list/internal/model"
@@ -24,6 +25,13 @@ type Store struct {
 	items    map[string]*model.Item
 	groups   []string
 	filePath string
+	revision int64 // atomically incremented on every save
+}
+
+// Revision returns the current monotonic write counter.
+// Clients can compare this value to detect server-side changes cheaply.
+func (s *Store) Revision() int64 {
+	return atomic.LoadInt64(&s.revision)
 }
 
 // New creates (or loads) a Store backed by filePath.
@@ -106,7 +114,11 @@ func (s *Store) save() error {
 	if err := os.WriteFile(tmp, data, 0644); err != nil {
 		return err
 	}
-	return os.Rename(tmp, s.filePath)
+	if err := os.Rename(tmp, s.filePath); err != nil {
+		return err
+	}
+	atomic.AddInt64(&s.revision, 1)
+	return nil
 }
 
 // sortedUnsafe must be called with the lock already held.

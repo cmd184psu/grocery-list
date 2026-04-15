@@ -769,9 +769,50 @@
 
   syncTog.addEventListener('change', async () => {
     syncEnabled = syncTog.checked;
-    banner.classList.toggle('hidden', syncEnabled);
-    if (syncEnabled) await syncToServer();
+    if (syncEnabled) {
+      banner.classList.add('hidden');
+      await fetchItems();
+      connectSSE();
+    } else {
+      disconnectSSE();
+      banner.textContent = '\u26a0 Offline mode \u2014 changes are local only';
+      banner.classList.remove('hidden');
+    }
   });
+
+  // ────────────────────────────────────────────────────────────────
+  // SSE live sync
+  // Connects to /api/events; re-fetches items whenever the server
+  // broadcasts a "refresh" event (i.e. after any mutation).
+  // Auto-reconnects on drop; shows a banner while disconnected.
+  // ────────────────────────────────────────────────────────────────
+  let evtSource = null;
+
+  function connectSSE() {
+    if (!syncEnabled) return;
+    if (evtSource) { evtSource.close(); evtSource = null; }
+
+    evtSource = new EventSource('/api/events');
+
+    evtSource.addEventListener('message', () => {
+      // Server sent a refresh signal — re-fetch the canonical item list.
+      fetchItems();
+    });
+
+    evtSource.addEventListener('open', () => {
+      banner.classList.add('hidden');
+    });
+
+    evtSource.onerror = () => {
+      // EventSource will auto-reconnect; show banner in the meantime.
+      banner.textContent = '\u26a0 Connection lost \u2014 reconnecting\u2026';
+      banner.classList.remove('hidden');
+    };
+  }
+
+  function disconnectSSE() {
+    if (evtSource) { evtSource.close(); evtSource = null; }
+  }
 
   // ────────────────────────────────────────────────────────────────
   // Init
@@ -779,6 +820,7 @@
   (async () => {
     await loadConfig();
     await fetchItems();
+    connectSSE();
   })();
 
 })();

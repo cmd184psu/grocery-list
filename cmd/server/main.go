@@ -60,8 +60,9 @@ func main() {
 		effectiveGroups = persistedGroups
 	}
 
-	h   := api.NewHandler(s, effectiveGroups, cfg.Progress)
-	mux := http.NewServeMux()
+	broker := api.NewBroker()
+	h      := api.NewHandler(s, effectiveGroups, cfg.Progress, broker)
+	mux    := http.NewServeMux()
 	h.Register(mux)
 
 	// Static file server with index.html fallback for SPA-style routing

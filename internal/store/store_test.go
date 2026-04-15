@@ -21,7 +21,7 @@ func newTempStore(t *testing.T) (*store.Store, string) {
 	return s, path
 }
 
-// ── Add / List ─────────────────────────────────────────────────────────
+// ── Add / List ─────────────────────────────────────────────────────
 
 func TestAdd_DefaultsToNeeded(t *testing.T) {
 	s, _ := newTempStore(t)
@@ -47,7 +47,7 @@ func TestAdd_AppearsInList(t *testing.T) {
 	}
 }
 
-// ── Patch ────────────────────────────────────────────────────────────
+// ── Patch ──────────────────────────────────────────────────────
 
 func TestPatch_StateChange(t *testing.T) {
 	s, _ := newTempStore(t)
@@ -81,7 +81,7 @@ func TestPatch_NotFound(t *testing.T) {
 	}
 }
 
-// ── Delete ───────────────────────────────────────────────────────────
+// ── Delete ─────────────────────────────────────────────────────
 
 func TestDelete_RemovesItem(t *testing.T) {
 	s, _ := newTempStore(t)
@@ -101,7 +101,7 @@ func TestDelete_NotFound(t *testing.T) {
 	}
 }
 
-// ── Reset ────────────────────────────────────────────────────────────
+// ── Reset ──────────────────────────────────────────────────────
 
 func TestReset_ClearsCompletedAndSetsCheck(t *testing.T) {
 	s, _ := newTempStore(t)
@@ -128,7 +128,7 @@ func TestReset_ClearsCompletedAndSetsCheck(t *testing.T) {
 	}
 }
 
-// ── Groups ───────────────────────────────────────────────────────────
+// ── Groups ─────────────────────────────────────────────────────
 
 func TestSaveGroups_OrphansItemsToNoGroup(t *testing.T) {
 	s, _ := newTempStore(t)
@@ -170,12 +170,10 @@ func TestSaveGroups_ItemsInOtherGroupsUnaffected(t *testing.T) {
 }
 
 func TestSaveGroups_NoGroupNameReserved(t *testing.T) {
-	// Items already in NoGroup should stay there when SaveGroups is called
-	// (NoGroup is not in the groups list, so valid check would not strip it).
 	s, _ := newTempStore(t)
 	item, _ := s.Add("Orphan", model.NoGroup)
 
-	s.SaveGroups([]string{"Dairy"}) // NoGroup not in list
+	s.SaveGroups([]string{"Dairy"})
 
 	var found bool
 	for _, it := range s.List() {
@@ -191,14 +189,13 @@ func TestSaveGroups_NoGroupNameReserved(t *testing.T) {
 	}
 }
 
-// ── Persistence ─────────────────────────────────────────────────────
+// ── Persistence ───────────────────────────────────────────────────
 
 func TestPersistence_RoundTrip(t *testing.T) {
 	s, path := newTempStore(t)
 	s.SaveGroups([]string{"Frozen"})
 	s.Add("Ice Cream", "Frozen")
 
-	// Reload from the same file.
 	s2, err := store.New(path)
 	if err != nil {
 		t.Fatalf("reload: %v", err)
@@ -233,7 +230,7 @@ func TestPersistence_LegacyArrayFormat(t *testing.T) {
 	}
 }
 
-// ── Reorder / Move ───────────────────────────────────────────────────
+// ── Reorder / Move ───────────────────────────────────────────────
 
 func TestReorder_SetsOrder(t *testing.T) {
 	s, _ := newTempStore(t)
@@ -241,12 +238,10 @@ func TestReorder_SetsOrder(t *testing.T) {
 	b, _ := s.Add("B", "G")
 	c, _ := s.Add("C", "G")
 
-	// Reverse the order.
 	if err := s.Reorder("G", []string{c.ID, b.ID, a.ID}); err != nil {
 		t.Fatalf("Reorder: %v", err)
 	}
 	items := s.List()
-	// After reorder items should be sorted c, b, a within group G.
 	orderMap := map[string]int{}
 	for _, it := range items {
 		orderMap[it.Name] = it.Order
@@ -266,5 +261,32 @@ func TestMove_ChangesGroup(t *testing.T) {
 	}
 	if moved.Group != "Frozen" {
 		t.Errorf("got group %q, want Frozen", moved.Group)
+	}
+}
+
+// ── Revision ────────────────────────────────────────────────────────────
+
+func TestRevision_IncrementsOnMutation(t *testing.T) {
+	s, _ := newTempStore(t)
+
+	r0 := s.Revision()
+
+	item, _ := s.Add("Milk", "Dairy")
+	r1 := s.Revision()
+	if r1 <= r0 {
+		t.Errorf("revision should increase after Add: %d → %d", r0, r1)
+	}
+
+	ns := model.StateCheck
+	s.Patch(item.ID, store.PatchPayload{State: &ns})
+	r2 := s.Revision()
+	if r2 <= r1 {
+		t.Errorf("revision should increase after Patch: %d → %d", r1, r2)
+	}
+
+	s.Delete(item.ID)
+	r3 := s.Revision()
+	if r3 <= r2 {
+		t.Errorf("revision should increase after Delete: %d → %d", r2, r3)
 	}
 }
