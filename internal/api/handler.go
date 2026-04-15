@@ -14,21 +14,24 @@ type Handler struct {
 	store        *store.Store
 	groups       []string
 	progress     bool
-	syncInterval int // seconds; surfaced via GET /api/config
+	syncInterval int    // seconds; surfaced via GET /api/config
+	title        string // display title; surfaced via GET /api/config
 	broker       *Broker
 }
 
 // NewHandler returns a Handler with an initial group list.
 // syncInterval is the client sync frequency in seconds (exposed via /api/config).
+// title is the initial display title sourced from config.
 // broker is used to push SSE refresh events to connected clients after mutations.
-func NewHandler(s *store.Store, groups []string, progress bool, syncInterval int, broker *Broker) *Handler {
-	return &Handler{store: s, groups: groups, progress: progress, syncInterval: syncInterval, broker: broker}
+func NewHandler(s *store.Store, groups []string, progress bool, syncInterval int, title string, broker *Broker) *Handler {
+	return &Handler{store: s, groups: groups, progress: progress, syncInterval: syncInterval, title: title, broker: broker}
 }
 
 // Register mounts all API routes on mux.
 func (h *Handler) Register(mux *http.ServeMux) {
 	// Config
 	mux.HandleFunc("/api/config",                 h.handleConfig)
+	mux.HandleFunc("/api/config/title",           h.handleConfigTitle)
 	mux.HandleFunc("/api/config/groups",          h.handleConfigGroupsAdd)
 	mux.HandleFunc("/api/config/groups/remove",   h.handleConfigGroupsRemove)
 	mux.HandleFunc("/api/config/groups/reorder",  h.handleConfigGroupsReorder)
@@ -82,11 +85,35 @@ func (h *Handler) handleConfig(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
+	// Prefer the live title from the store (may differ from startup config).
+	title := h.store.Title()
+	if title == "" {
+		title = h.title
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"groups":                h.groups,
 		"progress":              h.progress,
 		"sync_interval_seconds": h.syncInterval,
+		"title":                 title,
 	})
+}
+
+// POST /api/config/title  {"title":"My Market Run"}  → update list title
+func (h *Handler) handleConfigTitle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	title, ok := decodeName(w, r)
+	if !ok {
+		return
+	}
+	if err := h.store.SetTitle(title); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"title": title})
+	h.broker.Notify()
 }
 
 // POST /api/config/groups  {"name":"Dairy"}  → add a group

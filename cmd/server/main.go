@@ -60,8 +60,13 @@ func main() {
 		effectiveGroups = persistedGroups
 	}
 
+	// Seed store title from config if items.json has none.
+	if s.Title() == "" && cfg.Title != "" {
+		_ = s.SetTitle(cfg.Title)
+	}
+
 	broker := api.NewBroker(cfg.SyncIntervalSeconds * 1000)
-	h      := api.NewHandler(s, effectiveGroups, cfg.Progress, cfg.SyncIntervalSeconds, broker)
+	h      := api.NewHandler(s, effectiveGroups, cfg.Progress, cfg.SyncIntervalSeconds, cfg.Title, broker)
 	mux    := http.NewServeMux()
 	h.Register(mux)
 

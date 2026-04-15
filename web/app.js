@@ -12,6 +12,7 @@
   let hideNotNeeded       = false;
   let showProgress        = false;
   let syncIntervalSeconds = 1;    // configurable via ~/.grocery.json
+  let listTitle           = 'Grocery List'; // configurable via ~/.grocery.json
 
   const drag = { active: false, id: null, srcGroup: null };
 
@@ -39,6 +40,66 @@
   const groupsForm   = document.getElementById('groups-modal-form');
   const groupsInput  = document.getElementById('groups-modal-input');
   const groupsClose  = document.getElementById('groups-modal-close');
+
+  // ── Title modal
+  const titleModal     = document.getElementById('title-modal');
+  const titleInput     = document.getElementById('title-modal-input');
+  const titleError     = document.getElementById('title-modal-error');
+  const titleSaveBtn   = document.getElementById('title-modal-save');
+  const titleCancelBtn = document.getElementById('title-modal-cancel');
+  const titleModalForm = document.getElementById('title-modal-form');
+  const editTitleBtn   = document.getElementById('edit-title-btn');
+
+  function openTitleModal() {
+    titleInput.value = listTitle;
+    titleInput.classList.remove('input-error');
+    titleError.classList.add('hidden');
+    titleError.textContent = '';
+    titleModal.classList.remove('hidden');
+    requestAnimationFrame(() => { titleInput.focus(); titleInput.select(); });
+  }
+
+  function closeTitleModal() {
+    titleModal.classList.add('hidden');
+  }
+
+  async function saveTitleModal() {
+    const val = titleInput.value.trim();
+    if (!val) {
+      titleInput.classList.add('input-error');
+      titleError.textContent = 'Title cannot be empty.';
+      titleError.classList.remove('hidden');
+      titleInput.focus();
+      return;
+    }
+    titleSaveBtn.disabled = true;
+    try {
+      await api('POST', '/api/config/title', { name: val });
+      listTitle = val;
+      document.title = listTitle;
+      editTitleBtn.textContent = listTitle;
+      const logo = document.querySelector('.app-logo');
+      if (logo) logo.setAttribute('aria-label', listTitle);
+      closeTitleModal();
+    } catch (err) {
+      titleInput.classList.add('input-error');
+      titleError.textContent = 'Could not save title. Please try again.';
+      titleError.classList.remove('hidden');
+    } finally {
+      titleSaveBtn.disabled = false;
+    }
+  }
+
+  editTitleBtn.addEventListener('click', openTitleModal);
+  titleCancelBtn.addEventListener('click', closeTitleModal);
+  titleSaveBtn.addEventListener('click', saveTitleModal);
+  titleModalForm.addEventListener('submit', e => { e.preventDefault(); saveTitleModal(); });
+  titleModal.addEventListener('click', e => { if (e.target === titleModal) closeTitleModal(); });
+  titleModal.addEventListener('keydown', e => { if (e.key === 'Escape') closeTitleModal(); });
+  titleInput.addEventListener('input', () => {
+    titleInput.classList.remove('input-error');
+    titleError.classList.add('hidden');
+  });
 
   // ────────────────────────────────────────────────────────────────
   // Pure helpers  (mirrored in app.test.js — keep in sync)
@@ -89,6 +150,14 @@
     groups              = cfg?.groups                || [];
     showProgress        = cfg?.progress              || false;
     syncIntervalSeconds = cfg?.sync_interval_seconds ?? 1;
+    if (cfg?.title) {
+      listTitle = cfg.title;
+      document.title = listTitle;
+      const btn = document.getElementById('edit-title-btn');
+      if (btn) btn.textContent = listTitle;
+      const logo = document.querySelector('.app-logo');
+      if (logo) logo.setAttribute('aria-label', listTitle);
+    }
     rebuildGroupSelect();
     renderProgressBar();
   }
@@ -797,8 +866,9 @@
     evtSource = new EventSource('/api/events');
 
     evtSource.addEventListener('message', () => {
-      // Server sent a refresh signal — re-fetch the canonical item list.
+      // Server sent a refresh signal — re-fetch items AND config (title may have changed).
       fetchItems();
+      loadConfig();
     });
 
     evtSource.addEventListener('open', () => {

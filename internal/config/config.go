@@ -18,7 +18,10 @@ type Config struct {
 	Groups              []string `json:"groups"`
 	Progress            bool     `json:"progress"`
 	SyncIntervalSeconds int      `json:"sync_interval_seconds"`
+	Title               string   `json:"title"`
 }
+
+const DefaultTitle = "Grocery List"
 
 func DefaultConfig() *Config {
 	return &Config{
@@ -26,6 +29,7 @@ func DefaultConfig() *Config {
 		StaticDir:           "./web",
 		DataFile:            "./items.json",
 		SyncIntervalSeconds: 1,
+		Title:               DefaultTitle,
 		Groups: []string{
 			"Produce",
 			"Meats",

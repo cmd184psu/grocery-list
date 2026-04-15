@@ -38,7 +38,7 @@ func newHarness(t *testing.T, groups []string) *harness {
 		s.SaveGroups(groups)
 	}
 	broker := api.NewBroker(0)
-	h := api.NewHandler(s, groups, false, 1, broker)
+	h := api.NewHandler(s, groups, false, 1, "Grocery List", broker)
 	mux := http.NewServeMux()
 	h.Register(mux)
 	return &harness{s: s, h: h, broker: broker, mux: mux}
@@ -270,7 +270,7 @@ func TestHandlerGetConfig_SyncInterval(t *testing.T) {
 	}
 	const wantInterval = 7
 	broker := api.NewBroker(0)
-	h := api.NewHandler(s, nil, false, wantInterval, broker)
+	h := api.NewHandler(s, nil, false, wantInterval, "Grocery List", broker)
 	mux := http.NewServeMux()
 	h.Register(mux)
 
@@ -293,6 +293,90 @@ func TestHandlerGetConfig_SyncInterval(t *testing.T) {
 	if int(got.(float64)) != wantInterval {
 		t.Errorf("sync_interval_seconds: got %v, want %d", got, wantInterval)
 	}
+}
+
+// TestHandlerGetConfig_TitleDefault proves GET /api/config returns the title
+// passed to NewHandler when the store has no persisted title.
+func TestHandlerGetConfig_TitleDefault(t *testing.T) {
+	dir := t.TempDir()
+	s, err := store.New(filepath.Join(dir, "items.json"))
+	if err != nil {
+		t.Fatalf("store.New: %v", err)
+	}
+	broker := api.NewBroker(0)
+	h := api.NewHandler(s, nil, false, 1, "My Market Run", broker)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/config", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	var resp map[string]any
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if resp["title"] != "My Market Run" {
+		t.Errorf("title: got %v, want %q", resp["title"], "My Market Run")
+	}
+}
+
+// TestHandlerConfigTitle_SetAndRead proves POST /api/config/title persists the
+// new title and GET /api/config reflects it immediately.
+func TestHandlerConfigTitle_SetAndRead(t *testing.T) {
+	hh := newHarness(t, nil)
+
+	w := hh.do(t, http.MethodPost, "/api/config/title",
+		map[string]string{"name": "Corner Store Run"})
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST title: want 200, got %d — %s", w.Code, w.Body.String())
+	}
+	var post map[string]string
+	if err := json.NewDecoder(w.Body).Decode(&post); err != nil {
+		t.Fatalf("decode POST response: %v", err)
+	}
+	if post["title"] != "Corner Store Run" {
+		t.Errorf("POST response title: got %q, want %q", post["title"], "Corner Store Run")
+	}
+
+	cfgW := hh.do(t, http.MethodGet, "/api/config", nil)
+	var cfgResp map[string]any
+	if err := json.NewDecoder(cfgW.Body).Decode(&cfgResp); err != nil {
+		t.Fatalf("decode GET config: %v", err)
+	}
+	if cfgResp["title"] != "Corner Store Run" {
+		t.Errorf("GET /api/config title after update: got %v, want %q",
+			cfgResp["title"], "Corner Store Run")
+	}
+}
+
+// TestHandlerConfigTitle_EmptyNameRejected proves an empty title is rejected
+// with 400 Bad Request.
+func TestHandlerConfigTitle_EmptyNameRejected(t *testing.T) {
+	hh := newHarness(t, nil)
+	w := hh.do(t, http.MethodPost, "/api/config/title",
+		map[string]string{"name": ""})
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("want 400 for empty title, got %d", w.Code)
+	}
+}
+
+// TestHandlerConfigTitle_WrongMethod proves GET on /api/config/title returns 405.
+func TestHandlerConfigTitle_WrongMethod(t *testing.T) {
+	hh := newHarness(t, nil)
+	w := hh.do(t, http.MethodGet, "/api/config/title", nil)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("want 405, got %d", w.Code)
+	}
+}
+
+// TestBroker_NotifiedOnConfigTitle proves the SSE broker fires after a title change.
+func TestBroker_NotifiedOnConfigTitle(t *testing.T) {
+	hh := newHarness(t, nil)
+	notifyC(t, hh.broker, "POST /api/config/title", func() {
+		hh.do(t, http.MethodPost, "/api/config/title",
+			map[string]string{"name": "Farmers Market"})
+	})
 }
 
 // Unused import guard.
@@ -474,7 +558,7 @@ func TestSSE_RetryDirectiveSent(t *testing.T) {
 	}
 	const retryMs = 5000
 	broker := api.NewBroker(retryMs)
-	h := api.NewHandler(s, nil, false, 5, broker)
+	h := api.NewHandler(s, nil, false, 5, "Grocery List", broker)
 	mux := http.NewServeMux()
 	h.Register(mux)
 

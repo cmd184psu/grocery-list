@@ -15,6 +15,7 @@ import (
 
 // storeData is the on-disk format.
 type storeData struct {
+	Title  string        `json:"title,omitempty"`
 	Groups []string      `json:"groups,omitempty"`
 	Items  []*model.Item `json:"items"`
 }
@@ -24,8 +25,24 @@ type Store struct {
 	mu       sync.RWMutex
 	items    map[string]*model.Item
 	groups   []string
+	title    string
 	filePath string
 	revision int64 // atomically incremented on every save
+}
+
+// Title returns the current list title.
+func (s *Store) Title() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.title
+}
+
+// SetTitle updates the list title and persists it.
+func (s *Store) SetTitle(title string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.title = title
+	return s.save()
 }
 
 // Revision returns the current monotonic write counter.
@@ -98,11 +115,13 @@ func (s *Store) load() error {
 		s.items[item.ID] = item
 	}
 	s.groups = sd.Groups
+	s.title = sd.Title
 	return nil
 }
 
 func (s *Store) save() error {
 	sd := storeData{
+		Title:  s.title,
 		Groups: s.groups,
 		Items:  s.sortedUnsafe(),
 	}
